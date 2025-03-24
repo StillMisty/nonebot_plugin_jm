@@ -1,5 +1,4 @@
 import jmcomic
-import nonebot_plugin_localstore as store
 from nonebot import require
 from nonebot.adapters.onebot.v11 import Bot, Event
 from nonebot.log import logger
@@ -43,12 +42,11 @@ jm = on_alconna(
 @jm.handle()
 async def _(bot: Bot, event: Event, album_id: Match[int]):
     album_id_str = str(album_id.result)
-    path = store.get_cache_dir("nonebot_plugin_jm")
 
     # 使用锁确保同一时间只有一个请求在处理同一个album_id
     async with acquire_album_lock(album_id_str):
         try:
-            msg = await download_album(album_id_str, path)
+            msg = await download_album(album_id_str)
         except jmcomic.jm_exception.MissingAlbumPhotoException:
             await jm.finish("请求的本子不存在！")
         except Exception as e:

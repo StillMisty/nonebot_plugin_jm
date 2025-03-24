@@ -16,9 +16,9 @@ import nonebot_plugin_localstore as store  # noqa: E402
 # 用于防止并发下载冲突的锁字典
 _download_locks = {}
 # 每次启动清理缓存目录
-path = store.get_cache_dir("nonebot_plugin_jm")
-if path.exists():
-    shutil.rmtree(path)
+cache_directory = store.get_cache_dir("nonebot_plugin_jm")
+if cache_directory.exists():
+    shutil.rmtree(cache_directory)
 
 jm_pwd = config.jm_pwd
 if jm_pwd:
@@ -41,7 +41,7 @@ async def acquire_album_lock(album_id: str):
             _download_locks.pop(album_id, None)
 
 
-async def download_album(album_id: str, path: Path) -> list:
+async def download_album(album_id: str) -> list:
     """根据 album_id 下载漫画，并返回压缩后的文件路径。
 
     Args:
@@ -56,12 +56,12 @@ async def download_album(album_id: str, path: Path) -> list:
     client = options.new_jm_client()
     album: jmcomic.JmAlbumDetail = client.get_album_detail(album_id)
 
-    zip_file_name = path / f"{album.name}.zip"
+    zip_file_name = cache_directory / f"{album.name}.zip"
     # 如果已经下载过，直接返回
     if zip_file_name.exists():
         return zip_file_name
 
-    album_folder = path / album_id
+    album_folder = cache_directory / album_id
 
     total_photos = len(album)
     logger.info(f"开始下载漫画 {album.name}，共 {total_photos} 章节")
