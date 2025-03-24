@@ -1,6 +1,6 @@
 import jmcomic
 import nonebot_plugin_localstore as store
-from nonebot.adapters.onebot.v11 import Bot, Event, MessageSegment
+from nonebot.adapters.onebot.v11 import Bot, Event
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
 from nonebot_plugin_alconna import (  # noqa: E402
@@ -11,6 +11,7 @@ from nonebot_plugin_alconna import (  # noqa: E402
     on_alconna,
 )
 
+from .Config import Config
 from .utils import acquire_album_lock, download_album
 
 __plugin_meta__ = PluginMetadata(
@@ -19,6 +20,8 @@ __plugin_meta__ = PluginMetadata(
     type="application",
     usage="jm [禁漫号]",
     homepage="https://github.com/StillMisty/nonebot_plugin_jm",
+    config=Config,
+    supported_adapters={"~onebot.v11"},
 )
 
 jm = on_alconna(
