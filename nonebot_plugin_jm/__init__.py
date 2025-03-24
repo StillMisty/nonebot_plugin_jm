@@ -23,7 +23,7 @@ __plugin_meta__ = PluginMetadata(
     name="禁漫下载",
     description="下载 jm 漫画",
     type="application",
-    usage="jm [禁漫号]",
+    usage=f"jm [禁漫号] # 密码为{config.jm_pwd if config.jm_pwd else '空'}",
     homepage="https://github.com/StillMisty/nonebot_plugin_jm",
 )
 
@@ -34,7 +34,7 @@ jm = on_alconna(
         meta=CommandMeta(
             compact=True,
             description="下载 jm 漫画",
-            usage="jm [禁漫号]",
+            usage=f"jm [禁漫号] # 密码为{config.jm_pwd if config.jm_pwd else '空'}",
         ),
     )
 )
