@@ -4,11 +4,14 @@ import shutil
 from pathlib import Path
 
 import jmcomic
-import nonebot_plugin_localstore as store
 import pyzipper
+from nonebot import require
 from nonebot.log import logger
 
 from .Config import config
+
+require("nonebot_plugin_localstore")
+import nonebot_plugin_localstore as store  # noqa: E402
 
 # 用于防止并发下载冲突的锁字典
 _download_locks = {}

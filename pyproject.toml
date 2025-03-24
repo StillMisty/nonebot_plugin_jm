@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-jm"
-version = "0.2.2"
+version = "0.2.3"
 description = "下载 jm 漫画"
 readme = "README.md"
 license.file = "LICENSE"
