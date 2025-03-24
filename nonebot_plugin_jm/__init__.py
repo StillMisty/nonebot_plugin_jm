@@ -1,8 +1,14 @@
 import jmcomic
 import nonebot_plugin_localstore as store
+from nonebot import require
 from nonebot.adapters.onebot.v11 import Bot, Event
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
+
+from .Config import Config
+from .utils import acquire_album_lock, download_album
+
+require("nonebot_plugin_alconna")
 from nonebot_plugin_alconna import (  # noqa: E402
     Alconna,
     Args,
@@ -10,9 +16,6 @@ from nonebot_plugin_alconna import (  # noqa: E402
     Match,
     on_alconna,
 )
-
-from .Config import Config
-from .utils import acquire_album_lock, download_album
 
 __plugin_meta__ = PluginMetadata(
     name="禁漫下载",
