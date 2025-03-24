@@ -14,4 +14,4 @@ pip install nonebot_plugin_jm
 
 ## 配置
 
-jm_pwd = "jm" # 为防止封号设置压缩包解压密码，默认为 jm ，当设置为None时不设置密码
+jm_pwd = None # 默认不设置解压密码，但如果你怕腾讯风控，可以设置一个字符串作为解压密码
