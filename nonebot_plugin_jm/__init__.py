@@ -1,11 +1,11 @@
 import asyncio
 import contextlib
 import shutil
-import zipfile
 from pathlib import Path
 
 import jmcomic
 import nonebot_plugin_localstore as store
+import pyzipper
 from nonebot.adapters.onebot.v11 import MessageSegment
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
@@ -16,6 +16,8 @@ from nonebot_plugin_alconna import (  # noqa: E402
     Match,
     on_alconna,
 )
+
+from .Config import config
 
 __plugin_meta__ = PluginMetadata(
     name="禁漫下载",
@@ -44,6 +46,10 @@ path = store.get_cache_dir("nonebot_plugin_jm")
 if path.exists():
     shutil.rmtree(path)
 
+jm_pwd = config.jm_pwd
+if jm_pwd:
+    jm_pwd = jm_pwd.encode("utf-8")
+
 
 @contextlib.asynccontextmanager
 async def acquire_album_lock(album_id: str):
@@ -57,7 +63,6 @@ async def acquire_album_lock(album_id: str):
         yield
     finally:
         lock.release()
-        # 如果不再需要这个锁，可以清理它
         if not lock.locked():
             _download_locks.pop(album_id, None)
 
@@ -88,7 +93,7 @@ async def download_album(album_id: str, path: Path) -> Path:
     logger.info(f"开始下载漫画 {album.name}，共 {total_photos} 章节")
 
     index = 1
-    for photo_index, photo in enumerate(album, 1):
+    for _, photo in enumerate(album, 1):
         photo = client.get_photo_detail(photo.photo_id)
 
         # 根据章节数量决定路径结构
@@ -97,13 +102,10 @@ async def download_album(album_id: str, path: Path) -> Path:
             base_path = base_path / f"{index:03d}章"  # 保证文件夹按照章节顺序排序
             index += 1
 
-        # 确保目录存在
         base_path.mkdir(parents=True, exist_ok=True)
 
-        total_images = len(photo)
-
         # 并发下载图片
-        async def download_image(img_index, image: jmcomic.JmImageDetail):
+        async def download_image(image: jmcomic.JmImageDetail):
             image_path = base_path / image.filename
             try:
                 # 将同步下载转为异步任务
@@ -116,8 +118,8 @@ async def download_album(album_id: str, path: Path) -> Path:
 
         # 创建所有图片的下载任务
         download_tasks = []
-        for img_index, image in enumerate(photo, 1):
-            download_tasks.append(download_image(img_index, image))
+        for _, image in enumerate(photo, 1):
+            download_tasks.append(download_image(image))
 
         # 并发执行所有下载任务，最大并发数为10个
         semaphore = asyncio.Semaphore(10)
@@ -148,14 +150,15 @@ def zip_folder(folder_path: Path, output_path: Path):
         output_path: 输出的 ZIP 文件路径 (包括文件名和 .zip 扩展名)，可以是 str 或 Path 对象。
     """
 
-    with zipfile.ZipFile(
-        output_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9
+    with pyzipper.AESZipFile(
+        output_path, "w", compression=pyzipper.ZIP_LZMA, encryption=pyzipper.WZ_AES
     ) as zipf:
+        if jm_pwd:
+            zipf.setpassword(jm_pwd)
         for file_path in folder_path.rglob("*"):
             if file_path.is_file():
-                # 计算相对路径，以便在 ZIP 文件中保持目录结构
                 arcname = file_path.relative_to(folder_path)
-                zipf.write(file_path, arcname)
+                zipf.write(file_path, str(arcname))
 
 
 @jm.handle()
