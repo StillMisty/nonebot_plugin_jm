@@ -1,0 +1,21 @@
+[project]
+name = "nonebot-plugin-jm"
+version = "0.1.0"
+description = "下载 jm 漫画"
+readme = "README.md"
+license.file = "LICENSE"
+requires-python = ">=3.10"
+dependencies = [
+    "nonebot-adapter-onebot>=2.3",
+    "nonebot2>=2.3",
+    "nonebot_plugin_alconna>=0.53",
+    "nonebot_plugin_localstore>=0.7",
+    "jmcomic>=2.5.0",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/StillMisty/nonebot_plugin_jm"
