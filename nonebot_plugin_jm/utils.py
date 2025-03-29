@@ -105,13 +105,11 @@ async def download_album(album_id: str) -> list:
 
         await asyncio.gather(*[bounded_download(task) for task in download_tasks])
 
-    # 压缩文件
-    logger.info(f"正在创建压缩文件: {zip_file_name}")
-
     # 异步压缩文件
+    logger.info(f"正在创建压缩文件: {zip_file_name}")
     await asyncio.to_thread(zip_folder, album_folder, zip_file_name)
 
-    # 删除下载的文件夹
+    # 删除下载漫画所在的文件夹，仅保留压缩文件
     await asyncio.to_thread(shutil.rmtree, album_folder)
 
     return structure_node(album, zip_file_name)
