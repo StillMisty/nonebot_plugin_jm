@@ -16,7 +16,7 @@ import nonebot_plugin_localstore as store  # noqa: E402
 # 用于防止并发下载冲突的锁字典
 _download_locks = {}
 # 每次启动清理缓存目录
-cache_directory = store.get_cache_dir("nonebot_plugin_jm")
+cache_directory = store.get_plugin_cache_dir()
 if cache_directory.exists():
     shutil.rmtree(cache_directory)
 
@@ -54,7 +54,9 @@ async def download_album(album_id: str) -> list:
 
     options = jmcomic.JmOption.default()
     client = options.new_jm_client()
-    album: jmcomic.JmAlbumDetail = client.get_album_detail(album_id)
+    album: jmcomic.JmAlbumDetail = await asyncio.to_thread(
+        client.get_album_detail, album_id
+    )
 
     zip_file_name = cache_directory / f"{album.name}.zip"
     # 如果已经下载过，直接返回
@@ -68,8 +70,7 @@ async def download_album(album_id: str) -> list:
 
     index = 1
     for _, photo in enumerate(album, 1):
-        photo = client.get_photo_detail(photo.photo_id)
-
+        photo = await asyncio.to_thread(client.get_photo_detail, photo.photo_id)
         # 根据章节数量决定路径结构
         base_path = album_folder
         if len(album) > 1:
@@ -106,11 +107,12 @@ async def download_album(album_id: str) -> list:
 
     # 压缩文件
     logger.info(f"正在创建压缩文件: {zip_file_name}")
-    # 将同步压缩操作转为异步任务
+
+    # 异步压缩文件
     await asyncio.to_thread(zip_folder, album_folder, zip_file_name)
 
     # 删除下载的文件夹
-    shutil.rmtree(album_folder)
+    await asyncio.to_thread(shutil.rmtree, album_folder)
 
     return structure_node(album, zip_file_name)
 
