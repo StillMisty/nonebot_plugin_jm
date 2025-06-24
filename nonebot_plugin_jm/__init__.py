@@ -1,4 +1,4 @@
-import jmcomic
+from jmcomic.jm_exception import MissingAlbumPhotoException
 from nonebot import require
 from nonebot.adapters.onebot.v11 import Bot, Event
 from nonebot.log import logger
@@ -47,14 +47,22 @@ async def _(bot: Bot, event: Event, album_id: Match[int]):
     async with acquire_album_lock(album_id_str):
         try:
             msg = await download_album(album_id_str)
-        except jmcomic.jm_exception.MissingAlbumPhotoException:
+        except MissingAlbumPhotoException:
             await jm.finish("请求的本子不存在！")
         except Exception as e:
             logger.error(f"下载漫画时发生错误: {e}")
             await jm.finish(f"下载失败: {str(e)}")
 
-        await bot.send_forward_msg(
-            user_id=event.user_id,
-            group_id=getattr(event, "group_id", None),
-            messages=msg,
-        )
+        # 判断是否是群聊或私聊
+        if getattr(event, "group_id", None) is None:
+            # 不含 group_id 就是私聊
+            await bot.send_forward_msg(
+                user_id=event.get_user_id(),
+                messages=msg,
+            )
+        else:
+            # 群聊
+            await bot.send_forward_msg(
+                group_id=getattr(event, "group_id", None),
+                message=msg,
+            )

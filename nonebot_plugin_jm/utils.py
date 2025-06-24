@@ -61,7 +61,7 @@ async def download_album(album_id: str) -> list:
     zip_file_name = cache_directory / f"{album.name}.zip"
     # 如果已经下载过，直接返回
     if zip_file_name.exists():
-        return zip_file_name
+        return structure_node(album, zip_file_name)
 
     album_folder = cache_directory / album_id
 
@@ -151,7 +151,7 @@ def structure_text_node(text: str) -> dict:
     }
 
 
-def structure_node(jmAlbumDetail: jmcomic.JmAlbumDetail, zip_file_name: Path) -> dict:
+def structure_node(jmAlbumDetail: jmcomic.JmAlbumDetail, zip_file_name: Path) -> list:
     nodes = []
     nodes.append(structure_text_node(jmAlbumDetail.title))
     nodes.append(structure_text_node(f"作者：{' '.join(jmAlbumDetail.author)}"))
