@@ -3,8 +3,8 @@ import contextlib
 import shutil
 from pathlib import Path
 
-import jmcomic
 import pyzipper
+from jmcomic import JmAlbumDetail, JmApiClient, JmHtmlClient, JmImageDetail
 from nonebot import require
 from nonebot.log import logger
 
@@ -41,7 +41,16 @@ async def acquire_album_lock(album_id: str):
             _download_locks.pop(album_id, None)
 
 
-async def download_album(album_id: str) -> list:
+async def get_album_detail(
+    album_id: str, client: JmHtmlClient | JmApiClient
+) -> JmAlbumDetail:
+    """获取漫画的详细信息。"""
+    return await asyncio.to_thread(client.get_album_detail, album_id)
+
+
+async def download_album(
+    album: JmAlbumDetail, client: JmHtmlClient | JmApiClient
+) -> Path:
     """根据 album_id 下载漫画，并返回压缩后的文件路径。
 
     Args:
@@ -52,18 +61,12 @@ async def download_album(album_id: str) -> list:
         Path: 压缩后的文件路径
     """
 
-    options = jmcomic.JmOption.default()
-    client = options.new_jm_client()
-    album: jmcomic.JmAlbumDetail = await asyncio.to_thread(
-        client.get_album_detail, album_id
-    )
-
     zip_file_name = cache_directory / f"{album.name}.zip"
     # 如果已经下载过，直接返回
     if zip_file_name.exists():
-        return structure_node(album, zip_file_name)
+        return zip_file_name
 
-    album_folder = cache_directory / album_id
+    album_folder = cache_directory / album.album_id
 
     total_photos = len(album)
     logger.info(f"开始下载漫画 {album.name}，共 {total_photos} 章节")
@@ -80,7 +83,7 @@ async def download_album(album_id: str) -> list:
         base_path.mkdir(parents=True, exist_ok=True)
 
         # 并发下载图片
-        async def download_image(image: jmcomic.JmImageDetail):
+        async def download_image(image: JmImageDetail):
             image_path = base_path / image.filename
             try:
                 # 将同步下载转为异步任务
@@ -112,7 +115,7 @@ async def download_album(album_id: str) -> list:
     # 删除下载漫画所在的文件夹，仅保留压缩文件
     await asyncio.to_thread(shutil.rmtree, album_folder)
 
-    return structure_node(album, zip_file_name)
+    return zip_file_name
 
 
 def zip_folder(folder_path: Path, output_path: Path):
@@ -153,7 +156,7 @@ def structure_text_node(text: str) -> dict:
     }
 
 
-def structure_node(jmAlbumDetail: jmcomic.JmAlbumDetail, zip_file_name: Path) -> list:
+def structure_node(jmAlbumDetail: JmAlbumDetail, zip_file_name: Path) -> list:
     nodes = []
     nodes.append(structure_text_node(jmAlbumDetail.title))
     nodes.append(structure_text_node(f"作者：{' '.join(jmAlbumDetail.author)}"))

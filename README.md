@@ -15,3 +15,4 @@ pip install nonebot_plugin_jm
 ## 配置
 
 jm_pwd = None # 默认不设置解压密码，但如果你怕腾讯风控，可以设置一个字符串作为解压密码
+jm_forward = True # 是否转发压缩包，默认 True，建议开启，直接发送压缩包可能会被风控

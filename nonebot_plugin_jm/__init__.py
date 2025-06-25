@@ -1,11 +1,17 @@
+from jmcomic import JmOption
 from jmcomic.jm_exception import MissingAlbumPhotoException
 from nonebot import require
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, MessageEvent
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
 
-from .Config import Config
-from .utils import acquire_album_lock, download_album
+from .Config import Config, config
+from .utils import (
+    acquire_album_lock,
+    download_album,
+    get_album_detail,
+    structure_node,
+)
 
 require("nonebot_plugin_alconna")
 from nonebot_plugin_alconna import (  # noqa: E402
@@ -46,21 +52,46 @@ async def _(bot: Bot, event: MessageEvent, album_id: Match[int]):
     # 使用锁确保同一时间只有一个请求在处理同一个album_id
     async with acquire_album_lock(album_id_str):
         try:
-            msg = await download_album(album_id_str)
+            options = JmOption.default()
+            client = options.new_jm_client()
+            album_detail = await get_album_detail(album_id_str, client)
+            album_path = await download_album(album_detail, client)
         except MissingAlbumPhotoException:
             await jm.finish("请求的本子不存在！")
         except Exception as e:
             logger.error(f"下载漫画时发生错误: {e}")
             await jm.finish(f"下载失败: {str(e)}")
 
-        # 判断是否是群聊
-        if isinstance(event, GroupMessageEvent):
-            await bot.send_group_forward_msg(
-                group_id=event.group_id,
-                messages=msg,
-            )
+        if config.jm_forward:
+            msg = structure_node(album_detail, album_path)
+            # 判断是否是群聊
+            if isinstance(event, GroupMessageEvent):
+                await bot.send_group_forward_msg(
+                    group_id=event.group_id,
+                    messages=msg,
+                )
+            else:
+                await bot.send_private_forward_msg(
+                    user_id=event.user_id,
+                    messages=msg,
+                )
         else:
-            await bot.send_private_forward_msg(
-                user_id=event.user_id,
-                messages=msg,
+            if isinstance(event, GroupMessageEvent):
+                await bot.upload_group_file(
+                    group_id=event.group_id,
+                    file=str(album_path.resolve()),
+                    name=album_path.name,
+                )
+            else:
+                await bot.upload_private_file(
+                    user_id=event.user_id,
+                    file=str(album_path.resolve()),
+                    name=album_path.name,
+                )
+
+            msg = (
+                f"解压密码为: {config.jm_pwd}"
+                if config.jm_pwd
+                else "如无法下载，则是被风控，建议设置解压密码或是设置为转发或是在私聊中使用"
             )
+            await jm.finish(msg)
