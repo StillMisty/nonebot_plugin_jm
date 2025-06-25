@@ -146,6 +146,8 @@ def structure_text_node(text: str) -> dict:
     return {
         "type": "node",
         "data": {
+            "user_id": "114514",
+            "nickname": "JM助手",
             "content": [{"type": "text", "data": {"text": text}}],
         },
     }
