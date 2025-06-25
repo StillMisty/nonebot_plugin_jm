@@ -1,6 +1,6 @@
 from jmcomic.jm_exception import MissingAlbumPhotoException
 from nonebot import require
-from nonebot.adapters.onebot.v11 import Bot, Event
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, MessageEvent
 from nonebot.log import logger
 from nonebot.plugin import PluginMetadata
 
@@ -40,7 +40,7 @@ jm = on_alconna(
 
 
 @jm.handle()
-async def _(bot: Bot, event: Event, album_id: Match[int]):
+async def _(bot: Bot, event: MessageEvent, album_id: Match[int]):
     album_id_str = str(album_id.result)
 
     # 使用锁确保同一时间只有一个请求在处理同一个album_id
@@ -53,16 +53,14 @@ async def _(bot: Bot, event: Event, album_id: Match[int]):
             logger.error(f"下载漫画时发生错误: {e}")
             await jm.finish(f"下载失败: {str(e)}")
 
-        # 判断是否是群聊或私聊
-        if getattr(event, "group_id", None) is None:
-            # 不含 group_id 就是私聊
-            await bot.send_forward_msg(
-                user_id=event.get_user_id(),
+        # 判断是否是群聊
+        if isinstance(event, GroupMessageEvent):
+            await bot.send_group_forward_msg(
+                group_id=event.group_id,
                 messages=msg,
             )
         else:
-            # 群聊
-            await bot.send_forward_msg(
-                group_id=getattr(event, "group_id", None),
-                message=msg,
+            await bot.send_private_forward_msg(
+                user_id=event.user_id,
+                messages=msg,
             )
