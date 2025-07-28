@@ -15,6 +15,9 @@ import nonebot_plugin_localstore as store  # noqa: E402
 
 # 用于防止并发下载冲突的锁字典
 _download_locks = {}
+# 用户锁字典改为存储信号量
+_user_locks = {}
+
 # 每次启动清理缓存目录
 cache_directory = store.get_plugin_cache_dir()
 if cache_directory.exists():
@@ -23,6 +26,7 @@ if cache_directory.exists():
 jm_pwd = config.jm_pwd
 if jm_pwd:
     jm_pwd = jm_pwd.encode("utf-8")
+jm_lock = config.jm_lock
 
 
 @contextlib.asynccontextmanager
@@ -39,6 +43,31 @@ async def acquire_album_lock(album_id: str):
         lock.release()
         if not lock.locked():
             _download_locks.pop(album_id, None)
+
+
+class UserLockedException(Exception):
+    pass
+
+
+@contextlib.asynccontextmanager
+async def acquire_user_lock(user_id: int):
+    """获取针对特定用户的锁,支持配置并发数量"""
+    if not jm_lock:
+        yield
+        return
+
+    sem = _user_locks.get(user_id)
+    if sem is None:
+        sem = asyncio.Semaphore(config.jm_lock_size)
+        _user_locks[user_id] = sem
+
+    if sem._value > 0:  # 还有可用的锁
+        async with sem:
+            yield
+    else:
+        raise UserLockedException(
+            f"您已达到最大并发下载数({config.jm_lock_size}),请等待当前任务完成后再试"
+        )
 
 
 async def get_album_detail(
