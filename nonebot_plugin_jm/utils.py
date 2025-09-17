@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import re
 import shutil
 from pathlib import Path
 
@@ -22,11 +23,34 @@ _user_locks = {}
 cache_directory = store.get_plugin_cache_dir()
 if cache_directory.exists():
     shutil.rmtree(cache_directory)
+# 清理后重新创建
+cache_directory.mkdir(parents=True, exist_ok=True)
+
 
 jm_pwd = config.jm_pwd
 if jm_pwd:
     jm_pwd = jm_pwd.encode("utf-8")
 jm_lock = config.jm_lock
+
+
+def sanitize_and_truncate_filename(filename: str, max_length: int = 150) -> str:
+    """
+    清理并截断文件名以防止路径过长或包含非法字符。
+
+    Args:
+        filename (str): 原始文件名 (不含扩展名)。
+        max_length (int): 文件名（不含扩展名）的最大长度。
+
+    Returns:
+        str: 处理后的安全文件名。
+    """
+    # 移除Windows和Linux下文件名中的非法字符
+    sanitized_filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
+    # 截断文件名以防止过长
+    if len(sanitized_filename) > max_length:
+        sanitized_filename = sanitized_filename[:max_length].strip()
+        logger.warning(f"文件名过长，已截断: {filename} -> {sanitized_filename}")
+    return sanitized_filename
 
 
 @contextlib.asynccontextmanager
@@ -89,8 +113,10 @@ async def download_album(
     Returns:
         Path: 压缩后的文件路径
     """
+    # 处理文件名
+    safe_album_name = sanitize_and_truncate_filename(album.name)
+    zip_file_name = cache_directory / f"{safe_album_name}.zip"
 
-    zip_file_name = cache_directory / f"{album.name}.zip"
     # 如果已经下载过，直接返回
     if zip_file_name.exists():
         return zip_file_name
